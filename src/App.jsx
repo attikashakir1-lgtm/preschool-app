@@ -1,50 +1,121 @@
 import { useState } from "react";
 
 /* ===============================
-   LESSON ENGINE (INLINE)
+   LESSON ENGINE
    =============================== */
 function LessonEngine({ lesson, onComplete }) {
-  const [done, setDone] = useState(false);
+  const {
+    title,
+    instruction,
+    meaning,
+    options = [],
+    correctIndex = 0,
+    hintAfter = 2,
+    hint = "Think carefully.",
+  } = lesson;
 
-  if (done) {
+  const [selected, setSelected] = useState(null);
+  const [attempts, setAttempts] = useState(0);
+  const [status, setStatus] = useState("task");
+  // task | failure | success | meaning
+
+  const handleSubmit = () => {
+    if (selected === null) return;
+
+    const nextAttempts = attempts + 1;
+    setAttempts(nextAttempts);
+
+    if (selected === correctIndex) {
+      setStatus("success");
+    } else {
+      setStatus("failure");
+    }
+  };
+
+  if (status === "meaning") {
     return (
       <div>
         <h3>Meaning</h3>
-        <p>{lesson.meaning}</p>
+        <p>{meaning}</p>
         <button onClick={onComplete}>Continue</button>
+      </div>
+    );
+  }
+
+  if (status === "success") {
+    return (
+      <div>
+        <h3>Success</h3>
+        <p>Correct.</p>
+        <button onClick={() => setStatus("meaning")}>
+          See Meaning
+        </button>
+      </div>
+    );
+  }
+
+  if (status === "failure") {
+    return (
+      <div>
+        <h3>Not quite</h3>
+        <p>That answer is incorrect.</p>
+
+        {attempts >= hintAfter && (
+          <div style={{ marginTop: 10, padding: 10, background: "#eee" }}>
+            <strong>Hint:</strong> {hint}
+          </div>
+        )}
+
+        <button
+          style={{ marginTop: 10 }}
+          onClick={() => {
+            setSelected(null);
+            setStatus("task");
+          }}
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
     <div>
-      <h3>{lesson.title}</h3>
-      <p>{lesson.instruction}</p>
+      <h3>{title}</h3>
+      <p>{instruction}</p>
 
-      <div
-        style={{
-          width: 60,
-          height: 60,
-          background: "#ccc",
-          marginBottom: 10,
-        }}
-      />
+      {options.map((opt, i) => (
+        <div key={i} style={{ marginBottom: 6 }}>
+          <button
+            onClick={() => setSelected(i)}
+            style={{
+              fontWeight: selected === i ? "bold" : "normal",
+            }}
+          >
+            {opt}
+          </button>
+        </div>
+      ))}
 
-      <button onClick={() => setDone(true)}>Do Action</button>
+      <button style={{ marginTop: 10 }} onClick={handleSubmit}>
+        Submit
+      </button>
+
+      <p style={{ fontSize: 12, opacity: 0.6 }}>
+        Attempts: {attempts}
+      </p>
     </div>
   );
 }
 
 /* ===============================
-   CURRICULUM (ALL LEVELS)
+   CURRICULUM
    =============================== */
 const curriculum = {
-
   Preschool: [
     {
       title: "Tap the Active Button",
       instruction: "Which button responds?",
-      type: "multiple-choice",
       options: ["Grey Button", "Blue Button"],
       correctIndex: 1,
       meaning: "Some actions produce results. Some do not.",
@@ -57,11 +128,10 @@ const curriculum = {
     {
       title: "Correct Order",
       instruction: "What comes first when solving a task?",
-      type: "multiple-choice",
       options: [
         "Start randomly",
         "Read instructions first",
-        "Guess quickly"
+        "Guess quickly",
       ],
       correctIndex: 1,
       meaning: "Instructions guide actions.",
@@ -74,7 +144,6 @@ const curriculum = {
     {
       title: "Best Choice",
       instruction: "Which is the best decision?",
-      type: "multiple-choice",
       options: ["Ignore rules", "Follow the rule", "Change rules"],
       correctIndex: 1,
       meaning: "Choices affect outcomes.",
@@ -85,7 +154,6 @@ const curriculum = {
     {
       title: "Apply Rule",
       instruction: "If rule says double 4, what is result?",
-      type: "multiple-choice",
       options: ["6", "8", "4"],
       correctIndex: 1,
       meaning: "Rules apply consistently.",
@@ -96,7 +164,6 @@ const curriculum = {
     {
       title: "Think Before Acting",
       instruction: "What reduces mistakes?",
-      type: "multiple-choice",
       options: ["Rushing", "Planning", "Skipping"],
       correctIndex: 1,
       meaning: "Planning improves accuracy.",
@@ -109,7 +176,6 @@ const curriculum = {
     {
       title: "Structured Approach",
       instruction: "Complex problems require?",
-      type: "multiple-choice",
       options: ["Guessing", "Structure", "Luck"],
       correctIndex: 1,
       meaning: "Structure solves complexity.",
@@ -120,11 +186,10 @@ const curriculum = {
     {
       title: "Practice Simulation",
       instruction: "Practice helps because?",
-      type: "multiple-choice",
       options: [
         "It wastes time",
         "It builds readiness",
-        "It guarantees success"
+        "It guarantees success",
       ],
       correctIndex: 1,
       meaning: "Practice prepares you for real work.",
@@ -135,7 +200,6 @@ const curriculum = {
     {
       title: "Real Expectations",
       instruction: "Real gigs require?",
-      type: "multiple-choice",
       options: ["Excuses", "Accuracy", "Speed only"],
       correctIndex: 1,
       meaning: "Real work demands quality.",
@@ -150,6 +214,7 @@ const curriculum = {
 export default function App() {
   const stages = Object.keys(curriculum);
 
+  const [view, setView] = useState("learn");
   const [stage, setStage] = useState("Preschool");
   const [lessonIndex, setLessonIndex] = useState(0);
 
@@ -158,34 +223,65 @@ export default function App() {
 
   return (
     <div style={{ padding: 20 }}>
-      {/* TOP NAVIGATION */}
+      {/* Top Navigation */}
       <div style={{ marginBottom: 20 }}>
-        {stages.map((s) => (
-          <button
-            key={s}
-            onClick={() => {
-              setStage(s);
-              setLessonIndex(0);
-            }}
-            style={{
-              marginRight: 6,
-              fontWeight: stage === s ? "bold" : "normal",
-            }}
-          >
-            {s}
-          </button>
-        ))}
+        <button onClick={() => setView("learn")}>Learn</button>
+        <button onClick={() => setView("practice")} style={{ marginLeft: 10 }}>
+          Practice Inbox
+        </button>
+        <button onClick={() => setView("paid")} style={{ marginLeft: 10 }}>
+          Paid Inbox
+        </button>
       </div>
 
-      <h2>{stage}</h2>
+      {/* Practice View */}
+      {view === "practice" && (
+        <div>
+          <h2>Practice Inbox</h2>
+          <p>Practice gigs will appear here in Phase 2.</p>
+        </div>
+      )}
 
-      {lesson ? (
-        <LessonEngine
-          lesson={lesson}
-          onComplete={() => setLessonIndex((i) => i + 1)}
-        />
-      ) : (
-        <p>Stage complete. You can revisit anytime.</p>
+      {/* Paid View */}
+      {view === "paid" && (
+        <div>
+          <h2>Paid Inbox</h2>
+          <p>Locked. Complete University stage to unlock.</p>
+        </div>
+      )}
+
+      {/* Learning View */}
+      {view === "learn" && (
+        <>
+          <div style={{ marginBottom: 20 }}>
+            {stages.map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  setStage(s);
+                  setLessonIndex(0);
+                }}
+                style={{
+                  marginRight: 6,
+                  fontWeight: stage === s ? "bold" : "normal",
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+
+          <h2>{stage}</h2>
+
+          {lesson ? (
+            <LessonEngine
+              lesson={lesson}
+              onComplete={() => setLessonIndex((i) => i + 1)}
+            />
+          ) : (
+            <p>Stage complete.</p>
+          )}
+        </>
       )}
     </div>
   );
